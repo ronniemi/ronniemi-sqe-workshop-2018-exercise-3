@@ -8,7 +8,6 @@ import * as d3 from 'd3-graphviz';
 $(document).ready(function () {
     $('#codeSubmissionButton').click(() => {
         let code_to_cfg = $('#codePlaceholder').val();
-        console.log(code_to_cfg);
         let input_vector = get_input_from_string($('#inputVector').val());
         $('#graph_code').html('');
 
@@ -20,7 +19,6 @@ $(document).ready(function () {
         let color_table = color_code(symbolic_substitution_string, input_vector);
 
         var final_dot = create_cfg(code_to_cfg, boundry_table, color_table);
-        console.log(final_dot);
         draw_graph(final_dot);
     });
 });

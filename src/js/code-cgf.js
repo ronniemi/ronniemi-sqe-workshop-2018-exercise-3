@@ -2,18 +2,28 @@ import * as esgraph from 'esgraph';
 import * as esprima from 'esprima';
 
 function create_cfg(code, boundry_table, color_table){
-    console.log(code);
-    console.log(JSON.stringify(boundry_table,null,0))
-    console.log(JSON.stringify(color_table,null,0))
-
     let parsed_code_val = esprima.parse(code, { range: true });
 
     let val_nodes_edgs = get_dot_node_edg(parsed_code_val, code);
 
+    color_table = remove_duplicate_color_table(color_table);
     val_nodes_edgs[0] = get_lines_number(code, val_nodes_edgs[0], color_table);
     var block_nodes = create_blocked_cfg(val_nodes_edgs, boundry_table);
 
     return block_nodes;
+}
+
+function remove_duplicate_color_table(color_table){
+    let color_lines = [];
+    let new_color_table = [];
+    for(var i=0;i<color_table.length;i++){
+        let element = color_table[i];
+        if(!color_lines.includes(element.line)){
+            color_lines.push(element.line);
+            new_color_table.push(element);
+        }
+    }
+    return new_color_table;
 }
 
 function get_lines_number(code, nodes_list, color_table){
@@ -82,7 +92,7 @@ function create_nodes_edgs_json(dot){
         let element = nodes_list[i];
         json_nodes.push(node_to_json(element));
     }
-    for(var i=0;i<edg_list.length;i++){
+    for(i=0;i<edg_list.length;i++){
         let element = edg_list[i];
         json_edg.push(edge_to_json(element));
     }
@@ -234,12 +244,13 @@ function get_node_condition(node){
 function get_next_node_after_cond(node, nodes_edgs){
     if(node.type === 'while' && node.color === 'green'){
         let true_false_nodes = get_true_false_nodes(node, nodes_edgs);
-        if(get_node_condition(node)){
+        return true_false_nodes[1];
+        /*if(get_node_condition(node)){
             return true_false_nodes[1];
         }
         else{
             return true_false_nodes[0];
-        }
+        }*/
     }
     return menage_condition(node, nodes_edgs);
 }
@@ -295,7 +306,7 @@ function node_edg_to_dot(nodes_edg_val){
         let line = 'n' + element.node_idx + ' [xlabel=' + element.line_number + 'label="' + element.lable + '", shape="' + shape + '", fillcolor="' + color + ']';
         new_dot.push(line);
     }
-    for(var i=0;i<nodes_edg_val[1].length;i++){
+    for(i=0;i<nodes_edg_val[1].length;i++){
         let element = nodes_edg_val[1][i];
         let line = 'n' + element.from_node + ' -> n' + element.to_node + ' [label="' + element.cond + '"]';
         new_dot.push(line);
@@ -314,16 +325,21 @@ function remove_edgs(new_nodes, edg_list){
     let new_node_idx = [];
     let new_edg_list = [];
     for(var i=0;i<new_nodes.length;i++){
-        let element = new_nodes[i];
+        var element = new_nodes[i];
         new_node_idx.push(element.node_idx);
     }
-    for(var i=0;i<edg_list.length;i++){
-        let element = edg_list[i];
-        let node_1 = element.from_node;
-        let node_2 = element.to_node;
-        if((new_node_idx.includes(node_1) && new_node_idx.includes(node_2)) && node_1 !== node_2){
-            new_edg_list.push(element);
-        }
+    for(i=0;i<edg_list.length;i++){
+        element = edg_list[i];
+        new_edg_list = check_edg(element, new_node_idx, new_edg_list);
+    }
+    return new_edg_list;
+}
+
+function check_edg(element, new_node_idx, new_edg_list){
+    var node_1 = element.from_node;
+    var node_2 = element.to_node;
+    if((new_node_idx.includes(node_1) && new_node_idx.includes(node_2)) && node_1 !== node_2){
+        new_edg_list.push(element);
     }
     return new_edg_list;
 }
@@ -374,8 +390,7 @@ function edit_boundry_table(boundry_table){
         if(idx != boundry_table.length-1){
             element.end = boundry_table[idx+1].start-1;
             element.cond = false;
-        }
-        else{
+        }else{
             element.cond = false;}
         idx++;
     }
